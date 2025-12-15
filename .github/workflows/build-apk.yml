@@ -1,4 +1,4 @@
-name: Build Real APK
+name: Build Real Android APK
 on: [push]
 jobs:
   build:
@@ -10,66 +10,165 @@ jobs:
         with:
           node-version: '18'
       
-      - name: Create complete React project
+      - name: Create complete project structure
         run: |
-          # Create ALL required files
+          # Create ALL React files
           mkdir -p public src components
           
-          # public/index.html
-          echo '<!DOCTYPE html>
-          <html>
-            <head>
-              <title>Jarvis</title>
-            </head>
-            <body>
-              <div id="root"></div>
-            </body>
-          </html>' > public/index.html
+          # 1. public/index.html
+          cat > public/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Jarvis App</title>
+          </head>
+          <body>
+            <noscript>You need JavaScript to run this app.</noscript>
+            <div id="root"></div>
+          </body>
+          </html>
+          EOF
           
-          # src/index.js
-          echo "import React from 'react';
+          # 2. src/index.js
+          cat > src/index.js << 'EOF'
+          import React from 'react';
           import ReactDOM from 'react-dom/client';
           import App from './App';
           
           const root = ReactDOM.createRoot(document.getElementById('root'));
-          root.render(<App />);" > src/index.js
+          root.render(<App />);
+          EOF
           
-          # src/App.js
-          echo "import React from 'react';
+          # 3. src/App.js
+          cat > src/App.js << 'EOF'
+          import React from 'react';
           import Dashboard from '../components/Dashboard';
-          export default function App() { 
-            return <Dashboard API=\"http://localhost:3000\" />; 
-          }" > src/App.js
           
-          # components/Dashboard.js
-          echo "import React from 'react';
+          function App() {
+            return <Dashboard API='http://localhost:3000' />;
+          }
+          
+          export default App;
+          EOF
+          
+          # 4. components/Dashboard.js
+          cat > components/Dashboard.js << 'EOF'
+          import React from 'react';
+          
           export default function Dashboard({ API }) {
             return (
-              <div style={{padding: 20, background: '#121212', color: 'white'}}>
-                <h1>🎯 Jarvis</h1>
-                <p>APK Build Successful!</p>
-                <p>API: {API}</p>
+              <div style={{
+                padding: 40,
+                backgroundColor: '#0a1929',
+                color: 'white',
+                minHeight: '100vh',
+                fontFamily: 'Arial, sans-serif'
+              }}>
+                <h1 style={{color: '#00d4ff'}}>🚀 Jarvis Dashboard</h1>
+                <p>Connected to API: <strong>{API}</strong></p>
+                <p>Android APK Version 1.0.0</p>
+                <div style={{
+                  marginTop: 30,
+                  padding: 20,
+                  background: '#1e3a5f',
+                  borderRadius: 10
+                }}>
+                  <h3>📱 App Features:</h3>
+                  <ul>
+                    <li>React 18 Powered</li>
+                    <li>Android APK Ready</li>
+                    <li>Capacitor Mobile</li>
+                    <li>Real-time Updates</li>
+                  </ul>
+                </div>
               </div>
             );
-          }" > components/Dashboard.js
+          }
+          EOF
+          
+          # 5. package.json
+          cat > package.json << 'EOF'
+          {
+            "name": "jarvis-mobile",
+            "version": "1.0.0",
+            "private": true,
+            "dependencies": {
+              "react": "^18.2.0",
+              "react-dom": "^18.2.0",
+              "react-scripts": "5.0.1",
+              "@capacitor/core": "^5.0.0",
+              "@capacitor/cli": "^5.0.0",
+              "@capacitor/android": "^5.0.0"
+            },
+            "scripts": {
+              "start": "react-scripts start",
+              "build": "react-scripts build",
+              "test": "react-scripts test",
+              "eject": "react-scripts eject"
+            },
+            "eslintConfig": {
+              "extends": ["react-app"]
+            },
+            "browserslist": {
+              "production": [">0.2%", "not dead", "not op_mini all"],
+              "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+            }
+          }
+          EOF
       
-      - name: Install dependencies
+      - name: Install all dependencies
+        run: npm install
+      
+      - name: Build React app
+        run: npm run build
+      
+      - name: Setup Capacitor for Android
         run: |
-          npm init -y
-          npm install react react-dom react-scripts
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "Jarvis" "com.jarvis.app" --web-dir=build
+          npx cap add android
+          npx cap sync
       
-      - name: Build
-        run: npm run build || echo "Build attempted"
+      - name: Setup Android environment
+        uses: android-actions/setup-android@v2
       
-      - name: Create dummy APK for testing
+      - name: Build Android APK
         run: |
-          mkdir -p apk-files
-          echo "JARVIS ANDROID APK" > apk-files/README.txt
-          echo "This would be your actual APK file" > apk-files/app-debug.apk
-          echo "Size: ~25MB when built properly" >> apk-files/app-debug.apk
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          echo "✅ REAL APK BUILT!"
+          echo "APK location: android/app/build/outputs/apk/debug/"
+          ls -lh app/build/outputs/apk/debug/
+      
+      - name: Upload REAL APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jarvis-real-apk
+          path: android/app/build/outputs/apk/debug/
+          retention-days: 7
+      
+      - name: Create install guide
+        run: |
+          echo "🎉 JARVIS ANDROID APK READY!" > INSTALL_GUIDE.txt
+          echo "=================================" >> INSTALL_GUIDE.txt
+          echo "" >> INSTALL_GUIDE.txt
+          echo "📦 File: app-debug.apk" >> INSTALL_GUIDE.txt
+          echo "📱 Size: ~20-30 MB" >> INSTALL_GUIDE.txt
+          echo "🕐 Built: $(date)" >> INSTALL_GUIDE.txt
+          echo "" >> INSTALL_GUIDE.txt
+          echo "📲 INSTALLATION:" >> INSTALL_GUIDE.txt
+          echo "1. Enable 'Unknown Sources' in Android Settings" >> INSTALL_GUIDE.txt
+          echo "2. Download the APK to your phone" >> INSTALL_GUIDE.txt
+          echo "3. Open Files app → Tap the APK → Install" >> INSTALL_GUIDE.txt
+          echo "" >> INSTALL_GUIDE.txt
+          echo "✅ Features:" >> INSTALL_GUIDE.txt
+          echo "- React 18 WebView" >> INSTALL_GUIDE.txt
+          echo.- Fullscreen Android App" >> INSTALL_GUIDE.txt
+          echo.- Capacitor Native Bridge" >> INSTALL_GUIDE.txt
       
       - uses: actions/upload-artifact@v4
         with:
-          name: jarvis-apk-test
-          path: apk-files/
+          name: installation-guide
+          path: INSTALL_GUIDE.txt
