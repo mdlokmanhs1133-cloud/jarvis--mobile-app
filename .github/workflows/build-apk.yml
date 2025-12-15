@@ -1,33 +1,95 @@
-name: Build with Download
+name: Build Real APK
 on: [push]
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
-      - name: Create Download Package
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Create Dashboard component
         run: |
-          # Create APK-like structure
-          mkdir -p apk-package
-          
-          # Create main APK info
-          echo "JARVIS ANDROID APP" > apk-package/APP-INFO.txt
-          echo "Version: 1.0.0" >> apk-package/APP-INFO.txt
-          echo "Build Date: $(date)" >> apk-package/APP-INFO.txt
-          echo "" >> apk-package/APP-INFO.txt
-          echo "📱 HOW TO INSTALL:" >> apk-package/APP-INFO.txt
-          echo "1. Enable 'Unknown Sources' in Settings" >> apk-package/APP-INFO.txt
-          echo "2. Extract this ZIP" >> apk-package/APP-INFO.txt
-          echo "3. Install the APK file" >> apk-package/APP-INFO.txt
-          
-          # Create a dummy APK (text file for now)
-          echo "This would be your actual APK file" > apk-package/jarvis-app.apk.txt
-          echo "In real build, this is a 20-30MB Android package" >> apk-package/jarvis-app.apk.txt
+          mkdir -p components
+          cat > components/Dashboard.js << 'EOF'
+          import React from 'react';
+          export default function Dashboard({ API }) {
+            return (
+              <div style={{
+                padding: 20,
+                backgroundColor: '#121212',
+                color: 'white',
+                minHeight: '100vh'
+              }}>
+                <h1>🎯 Jarvis Dashboard</h1>
+                <p>API Endpoint: {API}</p>
+                <p>Android APK Build Successful! 🚀</p>
+                <p>Install this APK on your Android device</p>
+              </div>
+            );
+          }
+          EOF
       
-      - name: Upload for Download
+      - name: Install React dependencies
+        run: |
+          npm install react react-dom react-scripts
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+      
+      - name: Build React app
+        run: npm run build
+      
+      - name: Setup Android environment
+        run: |
+          # Initialize Capacitor
+          npx cap init "Jarvis" "com.jarvis.app" --web-dir=build
+          npx cap add android
+          npx cap sync
+      
+      - name: Setup Java and Android SDK
+        uses: android-actions/setup-android@v2
+      
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+          echo "✅ APK built successfully!"
+          ls -la app/build/outputs/apk/debug/
+      
+      - name: Upload APK files
         uses: actions/upload-artifact@v4
         with:
-          name: jarvis-android-app
-          path: apk-package/
+          name: jarvis-real-apk
+          path: |
+            android/app/build/outputs/apk/debug/
+            build/
           retention-days: 7
+      
+      - name: Create install instructions
+        run: |
+          echo "📱 JARVIS ANDROID APK" > INSTALL.txt
+          echo "=====================" >> INSTALL.txt
+          echo "" >> INSTALL.txt
+          echo "✅ APK Built Successfully!" >> INSTALL.txt
+          echo "Build time: $(date)" >> INSTALL.txt
+          echo "" >> INSTALL.txt
+          echo "📦 Files included:" >> INSTALL.txt
+          echo "- app-debug.apk (Main APK file)" >> INSTALL.txt
+          echo "- app-debug.apk.idsig (Signature)" >> INSTALL.txt
+          echo "- output.json (Build info)" >> INSTALL.txt
+          echo "" >> INSTALL.txt
+          echo "📲 HOW TO INSTALL:" >> INSTALL.txt
+          echo "1. Enable 'Unknown Sources' in Android Settings" >> INSTALL.txt
+          echo "2. Download the APK to your phone" >> INSTALL.txt
+          echo "3. Open Files app and tap the APK" >> INSTALL.txt
+          echo "4. Tap 'Install'" >> INSTALL.txt
+          echo "" >> INSTALL.txt
+          echo "⚠️ Note: First build may take 5-7 minutes" >> INSTALL.txt
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: install-guide
+          path: INSTALL.txt
