@@ -1,0 +1,6 @@
+{
+  "appId": "com.jarvis.app",
+  "appName": "Jarvis",
+  "webDir": "frontend/build",
+  "bundledWebRuntime": false
+}
